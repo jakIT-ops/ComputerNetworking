@@ -670,3 +670,253 @@ Since BitTorrent is based on a hybrid architecture, it retains some centralized 
 * The file is first supplied to a peer in pieces called chunks, and then they also distribute the file to other peers.
 
 * This is sometimes called a peer-assisted system.
+
+# 4 The Transport Layer
+
+### Key Responsibilities of the Transport Layer
+
+* <code>Extends network to the applications</code>: the transport layer takes messages from the network to applications. In other words, while the network layer (directly below the transport layer) transports messages from one end-system to another, the transport layer delivers the message to and from the relevant application on an end-system.
+
+### Transport Layer Protocols
+
+The transport layer has two prominent protocols: the transmission control protocol and the user datagram protocol. In general, an application developer will have to choose between the two. We’ll discuss the intricacies of each in detail in upcoming chapters, but here is a quick overview.
+
+| TCP  | UDP |
+| :------------- | :------------- |
+| Delivers messages that we call ‘segments’ reliably and in order. | Does not ensure in-order delivery of messages that we call ‘datagrams.’ |
+| Detects any modifications that may have been introduced in the packets during delivery but does not correct them by default. | Detects any modifications that may have been introduced in the packets during delivery and corrects them. |
+| Handles the volumes of traffic at one time within the network core by sending only an appropriate amount of data at one time. | Does not ensure reliable delivery.|
+| Examples of applications/application protocols that use TCP are: HTTP, E-mail, File Transfers. | Generally faster than TCP because of the reduced overhead of ensuring uncorrupted delivery of packets in order. |
+| | Applications that use UDP include: Domain Name System (DNS), live video streaming, and Voice over IP (VoIP). |
+
+## 4.1 Multiplexing and Demultiplexing
+
+End-systems typically run a variety of applications at the same time. For example, at any given time a browser, a music streaming service, and an email agent could be running.
+
+### What is Demultiplexing
+
+Demultiplexing is the process of delivering the correct packets to the correct applications from one stream.
+
+Here’s a useful analogy: deciphering the mail that should be delivered to which houses after a large shipment of packages are received at a post office.
+
+<br>
+<div align="center">
+  <img src="img/04/demultiplexing.png" />
+  <br>
+  <code>End systems can be talking to many other applications at once which leaves us with the question: how to send messages such that they arrive to the correct process?</code>
+</div>
+<br>
+
+### What is Multiplexing
+
+Also, multiplexing allows messages to be sent to more than one destination host via a single medium.
+
+An analogy would be when several packages to several different locations are mailed out from one house.
+
+<br>
+<div align="center">
+  <img src="img/04/demultiplexing.png" />
+  <br>
+  <code>End systems can be talking to many other applications at once which leaves us with the question: how to send messages such that they arrive to the correct process?</code>
+</div>
+<br>
+
+Multiplexing and demultiplexing are usually a concern when one protocol (TCP for example) is used by many others (HTTP, SMTP, FTP) in an upper layer.
+
+Here’s a simplified view of what multiplexing and demultiplexing are.
+
+<br>
+<div align="center">
+  <img src="img/04/edemultiplexing.png" />
+</div>
+<br>
+
+## 4.2 Introduction to Congestion Control
+
+When more packets than the network has bandwidth for are sent through, some of them start getting dropped and others get delayed. This phenomenon leads to an overall drop in performance and is called <code>congestion</code>.
+
+### How Do We Fix It
+
+Congestion physically occurs at the network layer (i.e. in routers), however it’s mainly caused by the transport layer sending too much data at once. That means it will have to be dealt with or ‘controlled’ at the transport layer as well.
+
+> 📝 Note Congestion control also occurs in the network layer, but we’re skipping over that detail for now since the focus of this chapter is the transport layer. So congestion control with TCP is end-to-end; it exists on the end-systems and not the network. Also note that in this lesson, the term delay means end-to-end message delay.
+
+> 📝 Note: congestion collapse occurs when all end-systems are sending a lot of traffic but nothing is being received, for example, when all or most packets are dropped. There a few causes for this, including but not limited to Spurious retransmissions. Spurious retransmissions occur when a retransmission timer times out for packets that are not lost but have not yet reached the destination. So, much of the network’s bandwidth ends up being consumed by a small number of packets.
+
+<br>
+<div align="center">
+  <img src="img/04/power.png" />
+</div>
+<br>
+
+## 4.3 Reliable Data Transfer: Sliding Window
+
+### Pipelining
+
+Applications may generate data at a rate much higher than the network can transport it. Processor speed is generally much higher than the speed of writing out and reading data to/from the network (I/O).
+
+### Sliding Window
+
+The sliding window is the set of consecutive sequence numbers that the sender can use when transmitting segments without being forced to wait for an acknowledgment. At the beginning of a session, the sender and receiver agree on a sliding window size.
+
+The figure below illustrates the operation of the sliding window. The sliding window shown contains three segments. The sender can thus transmit three segments before being forced to wait for an acknowledgment. The sliding window moves to the higher sequence numbers upon reception of acknowledgments. When the first acknowledgment (of segment 0) is received, it allows the sender to move its sliding window to the right, and sequence number 3 becomes available.
+
+<br>
+<div align="center">
+  <img src="img/04/slidingWindow.png" />
+</div>
+<br>
+
+## 4.4 The User Datagram Protocol
+
+UDP, or <code>User Datagram Protocol</code>, is a transport layer protocol that works over the network layer’s famous <code>Internet protocol</code> (which we’ll look at in-depth in the next chapter). RFC 768 is the official RFC for UDP.
+
+#### How It Works
+
+UDP does not involve any initial handshaking like TCP does, and is hence called a connectionless protocol. This means that there are no established ‘connections’ between hosts.
+
+UDP prepends the source and destination ports to messages from the application layer and hands them off to the network layer. The Internet Protocol of the network layer is a best-effort attempt to deliver the message.
+
+### Structure of A UDP Datagram
+
+UDP prepends four 2-byte header fields to the data it receives from the application layer. So in total, a UDP header is 8 bytes long. The fields are:
+
+1. Source port number
+2. Destination port number
+3. Length of the datagram (header and data in bytes)
+4. Checksum to detect if errors have been introduced into the message. We’ll study this in detail in the next lesson!
+
+<br>
+<div align="center">
+  <img src="img/04/udp.png" />
+  <br>
+  <code>A UDP Datagram. The header is a total of 8 bytes or 64 bits long.</code>
+</div>
+<br>
+
+## 4.5 The Transmission Control Protocol
+
+TCP, or the transmission control protocol, is one of the two key protocols of the transport layer. TCP is what makes most modern applications as enjoyable and reliable as they are. HTTP’s implementation, for example, would be very complex, if it weren’t for TCP.
+
+TCP is a robust protocol meant to adapt to a diverse range of network topologies, bandwidths, delays, message sizes, and other varying factors that exist in the network layer.
+
+### What TCP Does
+
+1. <b>Send data</b> at an appropriate transmission rate. It should be a fast enough rate to make full use of the available capacity but it shouldn’t be so fast as to cause congestion.
+
+2. <b>.Segment data</b>. The application layer sends the transport layer a continuous and unsegmented stream of data so that there’s no limit to how much data the application layer can give to the transport layer at once. Hence, the transport layer divides it into appropriately sized segments. Note that a segment is a collection of bytes. Furthermore, when a TCP segment is too big, the network layer may break it into multiple network layer messages, so the receiving TCP entity would have to re-assemble the network layer messages.
+
+3. <b>End to end</b> flow control. Flow control means not overwhelming the receiver. It’s not the same as congestion control. Congestion control tries not to choke the network. However, if the receiving machine is slow, it might drown in data even if the network is not choked. Avoiding drowning the receiver in data is end to end flow control. There is also hop by hop flow control, which is done at the data link layer.
+
+<br>
+<div align="center">
+  <img src="img/04/tcp.png" />
+  <br>
+</div>
+<br>
+
+### A TCP Three-way Handshake FSM
+
+TCP connection establishment can be described with a four-state Finite State Machine (FSM) as shown below. In this FSM, X/Y indicates that segment X was transmitted and segment Y was received. Init is the initial state
+
+<br>
+<div align="center">
+  <img src="img/04/tcpfsm.png" />
+  <br>
+  <code>TCP FSM for connection establishment</code>
+</div>
+<br>
+
+### Simultaneous Connection Establishment
+
+<br>
+<div align="center">
+  <img src="img/04/sss.png" />
+  <br>
+</div>
+<br>
+
+# 5 Network Layer
+
+The main objective of the network layer is to allow end systems to exchange information through intermediate systems called routers. The unit of information in the network layer is called a packet.
+
+### Datagram Organization
+
+The datagram organization has been very popular in computer networks. Datagram-based network layers include IPv4 and IPv6 in the global Internet, CLNP defined by the ISO, IPX defined by Novell or XNS defined by Xerox.
+
+This organization is connectionless and hence each packet contains:
+
+  * The network layer address of the destination host.
+  * The network layer address of the sender.
+  * The information to be sent.
+
+To understand the datagram organization, let’s consider the slides below. A network layer address represented by a letter, has been assigned to each host and router. Host A wishes to send some information to host J.
+
+<br>
+<div align="center">
+  <img src="img/05/datagramorg.png" />
+  <br>
+</div>
+<br>
+
+
+<br>
+<div align="center">
+<img src="img/05/routingAlgorithm.png" />
+<br>
+</div>
+<br>
+
+## 5.1 The Control Plane: Distance Vector - Routing Information Protocol
+
+The Routing Information Protocol (RIP) based on the famous Belmman-Ford algorithm belongs to the distance vector class of routing algorithms and was used in ARPANET. While it used to be incredibly popular, it’s not used very much now. There are other distance vector routing algorithms too such as Ford-Fulkerson.
+
+### Initial state
+
+Each router or ‘node,’ maintains a routing table that initially contains the estimated cost to each of its neighbors.
+
+Consider the following example of a small network where the yellow circles represent nodes, the black lines represent links, and the purple numbers represent the cost of each link.
+
+<br>
+<div align="center">
+  <img src="img/05/sampleNetwork.png" />
+  <br>
+</div>
+<br>
+
+## 5.2 The Control Plane: Route Calculation - Dijkstra's
+
+Each router then computes the spanning tree rooted at itself and calculates the entries in the routing table by using Dijkstra’s shortest path algorithm. Dijkstra’s is a common algorithm that is usually taught in Algorithms or Data Structures classes. Let’s get a quick refresher of it.
+
+<br>
+<div align="center">
+  <img src="img/05/graph.png" />
+  <br>
+</div>
+<br>
+
+## 5.3 The Internet Control Message Protocol (ICMP)
+
+It’s sometimes necessary for intermediate routers or destination hosts to inform the sender of a packet about any problems that occur while processing it. In the TCP/IP protocol suite, this reporting is done by the Internet Control Message Protocol (ICMP). ICMP is defined in RFC 792.
+
+### ICMP Headers
+
+<br>
+<div align="center">
+  <img src="img/05/icmpheader.png" />
+  <br>
+</div>
+<br>
+
+## 5.4 Dynamic Host Configuration Protocol (DHCP)
+
+In the early days of the Internet, IP addresses were manually configured on both hosts and routers and almost never changed. However, this manual configuration can be complex and often causes errors that can be difficult to debug.
+
+To ease the attachment of hosts to subnets, most networks now support the Dynamic Host Configuration Protocol (DHCP) RFC 2131. DHCP allows a host to automatically retrieve its assigned IPv4 address. A DHCP client actually can retrieve other network parameters too, including subnet mask, default gateway and DNS server addresses from the DHCP server.
+
+<br>
+<div align="center">
+  <img src="img/05/dhcp.png" />
+  <br>
+</div>
+<br>
